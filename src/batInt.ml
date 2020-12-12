@@ -126,7 +126,9 @@ module BaseInt = struct
   *)
 
   let print out t = BatInnerIO.nwrite out (string_of_int t)
-  let print_hex out t = BatPrintf.fprintf out "%X" t
+  let print_hex out t =
+    let s = Printf.sprintf "%X" t in
+    ignore (BatInnerIO.really_output out s 0 (String.length s))
 
   let ( -- )  x y = BatEnum.seq x (add one) ((>=) y)
   let ( --- ) x y =

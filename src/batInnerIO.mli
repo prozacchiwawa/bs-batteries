@@ -70,14 +70,14 @@ val really_nread : input -> int -> string
     from the input. @raise No_more_input if at least [n] characters are
     not available. @raise Invalid_argument if [n] < 0. *)
 
-val input : input -> string -> int -> int -> int
+val input : input -> bytes -> int -> int -> int
 (** [input i s p l] reads up to [l] characters from the given input, storing
     them in string [s], starting at character number [p]. It returns the actual
     number of characters read or raise [No_more_input] if no character can be
     read. It will raise [Invalid_argument] if [p] and [l] do not designate a
     valid substring of [s]. *)
 
-val really_input : input -> string -> int -> int -> int
+val really_input : input -> bytes -> int -> int -> int
 (** [really_input i s p l] reads exactly [l] characters from the given input,
     storing them in the string [s], starting at position [p]. For consistency with
     {!BatIO.input} it returns [l]. @raise No_more_input if at [l] characters are
@@ -122,7 +122,7 @@ val close_all : unit -> unit
 (** Close all outputs.
     Ignore errors.*)
 
-val input_string : string -> input
+val input_string : bytes -> input
 (** Create an input that will read from a string. *)
 
 val output_string : unit -> string output
@@ -136,7 +136,7 @@ val on_close_out : 'a output -> ('a output -> unit) -> unit
 
 val create_in :
   read:(unit -> char) ->
-  input:(string -> int -> int -> int) ->
+  input:(bytes -> int -> int -> int) ->
   close:(unit -> unit) -> input
 (** Fully create an input by giving all the needed functions.
 
@@ -147,7 +147,7 @@ val create_in :
 
 val inherit_in:
   ?read:(unit -> char) ->
-  ?input:(string -> int -> int -> int) ->
+  ?input:(bytes -> int -> int -> int) ->
   ?close:(unit -> unit) ->
   input -> input
 (**
@@ -158,7 +158,7 @@ val inherit_in:
 
 val wrap_in :
   read:(unit -> char) ->
-  input:(string -> int -> int -> int) ->
+  input:(bytes -> int -> int -> int) ->
   close:(unit -> unit) ->
   underlying:(input list) ->
   input
@@ -173,7 +173,7 @@ val wrap_in :
 
 val create_out :
   write:(char -> unit) ->
-  output:(string -> int -> int -> int) ->
+  output:(bytes -> int -> int -> int) ->
   flush:(unit -> unit) ->
   close:(unit -> 'a) ->
   'a output
@@ -192,7 +192,7 @@ val create_out :
 
 val inherit_out:
   ?write:(char -> unit) ->
-  ?output:(string -> int -> int -> int) ->
+  ?output:(bytes -> int -> int -> int) ->
   ?flush:(unit -> unit) ->
   ?close:(unit -> unit) ->
   _ output -> unit output
@@ -204,7 +204,7 @@ val inherit_out:
 
 val wrap_out :
   write:(char -> unit)         ->
-  output:(string -> int -> int -> int) ->
+  output:(bytes -> int -> int -> int) ->
   flush:(unit -> unit)         ->
   close:(unit -> 'a)           ->
   underlying:('b output list)  ->
@@ -437,7 +437,7 @@ external noop        : unit      -> unit        = "%ignore"
    {7 Optimized access to fields}
 *)
 
-val get_output : _ output -> (string -> int -> int -> int)
+val get_output : _ output -> (bytes -> int -> int -> int)
 val get_flush  : _ output -> (unit -> unit)
 
 val lock : BatConcurrent.lock ref

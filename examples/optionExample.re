@@ -1,3 +1,4 @@
+/*
 let odd x =>
   switch (x mod 2) {
   | 0 => Some x
@@ -41,3 +42,4 @@ let to_string (type t) (t: typ t) (x: t) :string =>
   };
 
 Js.log (to_string String "Hello");
+*/

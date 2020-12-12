@@ -380,7 +380,10 @@ module Concrete = struct
   let of_array cmp l = Array.fold_left (fun a x -> add cmp x a) empty l
 
   let print ?(first="{") ?(last="}") ?(sep=",") print_elt out t =
-    BatEnum.print ~first ~last ~sep (fun out e -> BatPrintf.fprintf out "%a" print_elt e) out (enum t)
+    let pf out e =
+      print_elt out e
+    in
+    BatEnum.print ~first ~last ~sep pf out (enum t)
 
   let filter cmp f e = fold (fun x acc -> if f x then add cmp x acc else acc) e empty
 
@@ -751,7 +754,7 @@ end
 module Int = Make (BatInt)
 module Int32 = Make (BatInt32)
 module Int64 = Make (BatInt64)
-module Nativeint = Make (BatNativeint)
+module Nativeint = Make (BatNativeInt)
 module Float = Make (BatFloat)
 module Char = Make (BatChar)
 module String = Make (BatString)

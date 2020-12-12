@@ -1327,7 +1327,7 @@ let hard_count t =
     with No_more_elements -> !length
 
 (* common hidden function for print and print_at_most *)
-(*let _print_common ~first ~last ~sep ~limit print_a out e =
+let _print_common ~first ~last ~sep ~limit print_a out e =
   BatInnerIO.nwrite out first;
   match get e with
   | None    -> BatInnerIO.nwrite out last
@@ -1343,10 +1343,10 @@ let hard_count t =
         BatInnerIO.nwrite out sep;
         print_a out x;
         aux (limit-1)
-    in aux (limit-1)*)
+    in aux (limit-1)
 
-(*let print ?(first="") ?(last="") ?(sep=" ") print_a  out e =
-  _print_common ~first ~last ~sep ~limit:max_int print_a out e*)
+let print ?(first="") ?(last="") ?(sep=" ") print_a  out e =
+  _print_common ~first ~last ~sep ~limit:max_int print_a out e
 
 (*let print_at_most ?(first="") ?(last="") ?(sep=" ") ~limit print_a out e =
   if limit <= 0 then raise (Invalid_argument "enum.print_at_most");

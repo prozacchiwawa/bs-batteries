@@ -53,7 +53,7 @@ let pos_out o =
        incr p
      )
      ~output:(fun s sp l ->
-       let n = output o s sp l in
+       let n = output o (Bytes.to_string s) sp l in
        p := !p + n;
        n
      )
@@ -70,7 +70,7 @@ let progress_in inp f =
 
 let progress_out out f =
   wrap_out ~write:(fun c -> write out c; f())
-    ~output:(fun s i l -> let r = output out s i l in f(); r)
+    ~output:(fun s i l -> let r = output out (Bytes.to_string s) i l in f(); r)
     ~close:ignore
     ~flush:(fun () -> flush out)
     ~underlying:[out]
@@ -117,7 +117,7 @@ let input_enum e =
           match BatEnum.get e with
           | None -> l
           | Some c ->
-            Bytes.unsafe_set s p c;
+            (*Bytes.unsafe_set s p c; *)
             loop (p + 1) (l - 1)
       in
       let k = loop p l in
@@ -133,7 +133,7 @@ let output_enum() =
       Buffer.add_char b x
     )
     ~output:(fun s p l ->
-      Buffer.add_substring b s p l;
+      Buffer.add_subbytes b s p l;
       l
     )
     ~close:(fun () ->
@@ -166,7 +166,8 @@ let combine (a,b) =
   wrap_out ~write:(fun c ->
     write a c;
     write b c)
-    ~output:(fun s i j ->
+    ~output:(fun s_ i j ->
+      let s = Bytes.to_string s_ in
       let _ = output a s i j in
       output b s i j)
     ~flush:(fun () ->
@@ -378,7 +379,7 @@ class in_channel ch =
 
 class out_channel ch =
   object
-    method output s pos len = output ch s pos len
+    method output s pos len = output ch (Bytes.to_string s) pos len
     method flush() = flush ch
     method close_out() = ignore(close_out ch)
   end
@@ -401,7 +402,7 @@ let from_in_channel ch =
   let read() =
     try
       if ch#input cbuf 0 1 = 0 then raise Sys_blocked_io;
-      String.unsafe_get cbuf 0
+      Bytes.unsafe_get cbuf 0
     with
       End_of_file -> raise No_more_input
   in
@@ -449,7 +450,7 @@ let from_in_chars ch =
 let from_out_chars ch =
   let output s p l =
     for i = p to p + l - 1 do
-      ch#put (String.unsafe_get s i)
+      ch#put (Bytes.unsafe_get s i)
     done;
     l
   in
@@ -498,7 +499,7 @@ let lines_of2 ic =
   let find_eol () =
     let rec find_loop pos =
       if pos >= !end_pos then !read_pos - pos
-      else if buf.[pos] = '\n' then 1 + pos - !read_pos (* TODO: HANDLE CRLF *)
+      else if Bytes.get buf pos = '\n' then 1 + pos - !read_pos (* TODO: HANDLE CRLF *)
       else find_loop (pos+1)
     in
     find_loop !read_pos
@@ -506,12 +507,12 @@ let lines_of2 ic =
   let rec join_strings buf pos = function
     | [] -> buf
     | h::t ->
-      let len = String.length h in
-      String.blit h 0 buf (pos-len) len;
+      let len = Bytes.length h in
+      Bytes.blit h 0 buf (pos-len) len;
       join_strings buf (pos-len) t
   in
   let input_buf s o l =
-    String.blit buf !read_pos s o l;
+    Bytes.blit buf !read_pos s o l;
     read_pos := !read_pos + l;
     if !end_pos = !read_pos then
       try
@@ -533,7 +534,7 @@ let lines_of2 ic =
       else if n > 0 then (* newline found *)
         let res = Bytes.create (n-1) in
         input_buf res 0 (n-1);
-        input_buf " " 0 1; (* throw away EOL *)
+        input_buf (Bytes.make 1 ' ') 0 1; (* throw away EOL *)
         match accu with
         | [] -> res
         | _ -> let len = len + n-1 in
@@ -565,10 +566,10 @@ let tab_out ?(tab=' ') n out =
       if is_newline c then nwrite out spaces;
     )
     ~output:(fun s p l -> (*Replace each newline within the segment with newline^spaces*) (*FIXME?: performance - instead output each line and a newline between each char? *)
-      let length = String.length s                 in
-      let buffer = Buffer.create (String.length s) in
+      let length = Bytes.length s                 in
+      let buffer = Buffer.create (Bytes.length s) in
       for i = p to min (length - 1) l do
-        let c = String.unsafe_get s i in
+        let c = Bytes.unsafe_get s i in
         Buffer.add_char buffer c;
         if is_newline c then
           Buffer.add_string buffer spaces
@@ -588,7 +589,8 @@ let comb (a,b) =
   create_out ~write:(fun c ->
     write a c;
     write b c)
-    ~output:(fun s i j ->
+    ~output:(fun s_ i j ->
+      let s = Bytes.to_string s_ in
       let _ = output a s i j in
       output b s i j)
     ~flush:(fun () ->
@@ -616,7 +618,7 @@ let copy ?(buffer=4096) inp out =
     while true do
       let len = input inp buf 0 n in
       if len = 0 then raise No_more_input
-      else            ignore (really_output out buf 0 len)
+      else            ignore (really_output out (Bytes.to_string buf) 0 len)
     done
   with No_more_input -> ()
 
@@ -669,7 +671,7 @@ let synchronize_in ?(lock = !lock_factory ()) inp =
 let synchronize_out ?(lock = !lock_factory ()) out =
   wrap_out
     ~write: (BatConcurrent.sync lock (fun c     -> write out c))
-    ~output:(fun s p -> BatConcurrent.sync lock (fun l -> output out s p l))
+    ~output:(fun s p -> BatConcurrent.sync lock (fun l -> output out (Bytes.to_string s) p l))
     ~flush: (BatConcurrent.sync lock (fun ()    -> flush out))
     ~close: noop
     ~underlying:[out]
@@ -693,6 +695,8 @@ let synchronize_out ?(lock = !lock_factory ()) out =
    Yes, this is prohibitively expensive.
 *)
 let to_input_channel inp =
+  raise Exit
+(*
   try
     let descr =
       try BatUnix.descr_of_input inp
@@ -708,7 +712,7 @@ let to_input_channel inp =
     copy inp out;
     close_out out;
     Pervasives.open_in_bin name
-
+*)
 
 
 

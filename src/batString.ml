@@ -1007,8 +1007,8 @@ let edit_distance s1 s2 =
   Q.(pair string string) (fun (s1, s2) -> edit_distance s1 s2 = edit_distance s2 s1)
 *)
 
-(* let print = BatInnerIO.nwrite
-let println out s = BatInnerIO.nwrite out s; BatInnerIO.write out '\n' *)
+let print = BatInnerIO.nwrite
+let println out s = BatInnerIO.nwrite out s; BatInnerIO.write out '\n'
 
 (*$T
   BatIO.to_string print "\n" = "\n"

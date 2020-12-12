@@ -28,7 +28,7 @@ let weak_iter f s        = BatInnerWeaktbl.iter (fun x _ -> f x) s
 
 type input = {
   mutable in_read  : unit -> char;
-  mutable in_input : string -> int -> int -> int;
+  mutable in_input : bytes -> int -> int -> int;
   mutable in_close : unit -> unit;
   in_id: int;(**A unique identifier.*)
   in_upstream: input weak_set
@@ -36,7 +36,7 @@ type input = {
 
 type 'a output = {
   mutable out_write : char -> unit;
-  mutable out_output: string -> int -> int -> int;
+  mutable out_output: bytes -> int -> int -> int;
   mutable out_close : unit -> 'a;
   mutable out_flush : unit -> unit;
   out_id:    int;(**A unique identifier.*)
@@ -217,11 +217,11 @@ let nread i n =
         p := !p + r;
         l := !l - r;
       done;
-      s
+      Bytes.to_string s
     with
       No_more_input as e ->
       if !p = 0 then raise e;
-      String.sub s 0 !p
+      Bytes.to_string (Bytes.sub s 0 !p)
 
 let really_output o s p l' =
   let sl = String.length s in
@@ -229,7 +229,7 @@ let really_output o s p l' =
   let l = ref l' in
   let p = ref p in
   while !l > 0 do
-    let w = o.out_output s !p !l in
+    let w = o.out_output (Bytes.of_string s) !p !l in
     if w = 0 then raise Sys_blocked_io;
     p := !p + w;
     l := !l - w;
@@ -237,7 +237,7 @@ let really_output o s p l' =
   l'
 
 let input i s p l =
-  let sl = String.length s in
+  let sl = Bytes.length s in
   if p + l > sl || p < 0 || l < 0 then invalid_arg "BatIO.input";
   if l = 0 then
     0
@@ -245,7 +245,7 @@ let input i s p l =
     i.in_input s p l
 
 let really_input i s p l' =
-  let sl = String.length s in
+  let sl = Bytes.length s in
   if p + l' > sl || p < 0 || l' < 0 then invalid_arg "BatIO.really_input";
   let l = ref l' in
   let p = ref p in
@@ -264,14 +264,15 @@ let really_nread i n =
     let s = Bytes.create n
     in
     ignore(really_input i s 0 n);
-    s
+    (Bytes.to_string s)
 
 
 let write o x = o.out_write x
 
-let nwrite o s =
+let nwrite o s_ =
+  let s = Bytes.of_string s_ in
   let p = ref 0 in
-  let l = ref (String.length s) in
+  let l = ref (Bytes.length s) in
   while !l > 0 do
     let w = o.out_output s !p !l in
     (* FIXME: unknown how many characters were already written *)
@@ -283,7 +284,7 @@ let nwrite o s =
 let output o s p l =
   let sl = String.length s in
   if p + l > sl || p < 0 || l < 0 then invalid_arg "BatIO.output";
-  o.out_output s p l
+  o.out_output (Bytes.of_string s) p l
 
 let flush o = o.out_flush()
 
@@ -301,9 +302,9 @@ let read_all i =
   let str    = ref [] in
   let pos    = ref 0 in
   let rec loop() =
-    let s = nread i maxlen in
+    let s = Bytes.of_string (nread i maxlen) in
     str := (s,!pos) :: !str;
-    pos := !pos + String.length s;
+    pos := !pos + Bytes.length s;
     loop()
   in
   try
@@ -313,21 +314,21 @@ let read_all i =
   | Input_closed ->
     let buf = Bytes.create !pos in
     List.iter (fun (s,p) ->
-      String.unsafe_blit s 0 buf p (String.length s)
+      Bytes.blit s 0 buf p (Bytes.length s)
     ) !str;
-    buf
+    (Bytes.to_string buf)
 
 let input_string s =
   let pos = ref 0 in
-  let len = String.length s in
+  let len = Bytes.length s in
   create_in
     ~read:(fun () ->
       if !pos >= len then raise No_more_input
-      else String.unsafe_get s (post_incr pos))
+      else Bytes.unsafe_get s (post_incr pos))
     ~input:(fun sout p l ->
       if !pos >= len then raise No_more_input;
       let n = (if !pos + l > len then len - !pos else l) in
-      String.unsafe_blit s (post pos ( (+) n ) ) sout p n;
+      Bytes.unsafe_blit s (post pos ( (+) n ) ) sout p n;
       n
     )
     ~close:noop
@@ -349,7 +350,7 @@ let output_string() =
   let b = Buffer.create default_buffer_size in
   create_out
     ~write:  (fun c -> Buffer.add_char b c )
-    ~output: (fun s p l -> Buffer.add_substring b s p l;  l  )
+    ~output: (fun s p l -> Buffer.add_substring b (Bytes.to_string s) p l;  l  )
     ~close:  (fun () -> Buffer.contents b)
     ~flush:  noop
 
@@ -401,23 +402,23 @@ let output_channel ?(cleanup=false) ch =
 
 
 let pipe() =
-  let input = ref "" in
+  let input = ref (Bytes.make 0 'a') in
   let inpos = ref 0 in
   let output = Buffer.create default_buffer_size in
   let flush() =
-    input := Buffer.contents output;
+    input := Bytes.of_string (Buffer.contents output);
     inpos := 0;
     Buffer.reset output;
-    if String.length !input = 0 then raise No_more_input
+    if Bytes.length !input = 0 then raise No_more_input
   in
   let read() =
-    if !inpos = String.length !input then flush();
-    String.unsafe_get !input (post_incr inpos)
+    if !inpos = Bytes.length !input then flush();
+    Bytes.unsafe_get !input (post_incr inpos)
   in
   let input s p l =
-    if !inpos = String.length !input then flush();
-    let r = (if !inpos + l > String.length !input then String.length !input - !inpos else l) in
-    String.unsafe_blit !input !inpos s p r;
+    if !inpos = Bytes.length !input then flush();
+    let r = (if !inpos + l > Bytes.length !input then Bytes.length !input - !inpos else l) in
+    Bytes.unsafe_blit !input !inpos s p r;
     inpos := !inpos + r;
     r
   in
@@ -425,7 +426,7 @@ let pipe() =
     Buffer.add_char output c
   in
   let output s p l =
-    Buffer.add_substring output s p l;
+    Buffer.add_subbytes output s p l;
     l
   in
   let input  = create_in ~read ~input  ~close:noop

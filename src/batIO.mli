@@ -189,7 +189,7 @@ val really_nread : input -> int -> string
     Example: [let read_md5 ch = really_nread ch 32]
 *)
 
-val input : input -> string -> int -> int -> int
+val input : input -> bytes -> int -> int -> int
 (** [input i s p l] reads up to [l] characters from the given input,
     storing them in string [s], starting at character number [p]. It
     returns the actual number of characters read (which may be 0) or
@@ -205,7 +205,7 @@ val input : input -> string -> int -> int -> int
     done with No_more_input -> ()]
 *)
 
-val really_input : input -> string -> int -> int -> int
+val really_input : input -> bytes -> int -> int -> int
 (** [really_input i s p l] reads exactly [l] characters from the
     given input, storing them in the string [s], starting at
     position [p]. For consistency with {!BatIO.input} it returns
@@ -303,7 +303,7 @@ val close_all : unit -> unit
     To open a file for reading/writing, see {!File.open_in}
     and {!File.open_out}*)
 
-val input_string : string -> input
+val input_string : bytes -> input
 (** Create an input that will read from a string.
 
     Example: [
@@ -593,7 +593,7 @@ val drop_bits : in_bits -> unit
 
 val create_in :
   read:(unit -> char) ->
-  input:(string -> int -> int -> int) ->
+  input:(bytes -> int -> int -> int) ->
   close:(unit -> unit) -> input
 (** Fully create an input by giving all the needed functions.
 
@@ -604,7 +604,7 @@ val create_in :
 
 val wrap_in :
   read:(unit -> char) ->
-  input:(string -> int -> int -> int) ->
+  input:(bytes -> int -> int -> int) ->
   close:(unit -> unit) ->
   underlying:(input list) ->
   input
@@ -622,7 +622,7 @@ val wrap_in :
 
 val inherit_in:
   ?read:(unit -> char) ->
-  ?input:(string -> int -> int -> int) ->
+  ?input:(bytes -> int -> int -> int) ->
   ?close:(unit -> unit) ->
   input -> input
 (** Simplified and optimized version of {!wrap_in} which may be used
@@ -638,7 +638,7 @@ val inherit_in:
 
 val create_out :
   write:(char -> unit) ->
-  output:(string -> int -> int -> int) ->
+  output:(bytes -> int -> int -> int) ->
   flush:(unit -> unit) ->
   close:(unit -> 'a) ->
   'a output
@@ -657,7 +657,7 @@ val create_out :
 
 val wrap_out :
   write:(char -> unit)         ->
-  output:(string -> int -> int -> int) ->
+  output:(bytes -> int -> int -> int) ->
   flush:(unit -> unit)         ->
   close:(unit -> 'a)           ->
   underlying:('b output list)  ->
@@ -708,7 +708,7 @@ val wrap_out :
 
 val inherit_out:
   ?write:(char -> unit) ->
-  ?output:(string -> int -> int -> int) ->
+  ?output:(bytes -> int -> int -> int) ->
   ?flush:(unit -> unit) ->
   ?close:(unit -> unit) ->
   'a output -> unit output
@@ -774,13 +774,13 @@ val to_input_channel : input -> in_channel
 
 class in_channel : input ->
   object
-    method input : string -> int -> int -> int
+    method input : bytes -> int -> int -> int
     method close_in : unit -> unit
   end
 
 class out_channel : 'a output ->
   object
-    method output : string -> int -> int -> int
+    method output : bytes -> int -> int -> int
     method flush : unit -> unit
     method close_out : unit -> unit
   end
@@ -838,7 +838,7 @@ val strings_of : input -> string BatEnum.t
 
 val lines_of : input -> string BatEnum.t
 (** Read an enumeration of LF or CRLF terminated strings. *)
-val lines_of2 : input -> string BatEnum.t
+val lines_of2 : input -> bytes BatEnum.t
 
 val chunks_of : int -> input -> string BatEnum.t
 (** Read an input as an enumeration of strings of given length.  If the input isn't a multiple of that length, the final string will be smaller than the rest. *)

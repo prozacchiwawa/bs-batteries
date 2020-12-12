@@ -102,7 +102,7 @@ external get : string -> int -> char = "%string_safe_get"
     @raise Invalid_argument if [n] not a valid character number in [s]. *)
 
 
-external set : bytes -> int -> char -> unit = "%bytes_safe_set"
+external set : bytes -> int -> char -> unit = "%string_safe_set"
 (** [String.set s n c] modifies string [s] in place,
     replacing the character number [n] by [c].
     You can also write [s.[n] <- c] instead of [String.set s n c].
@@ -825,7 +825,7 @@ val edit_distance : t -> t -> int
 
 (** {7 Printing}*)
 
-(* val print: 'a BatInnerIO.output -> string -> unit *)
+val print: 'a BatInnerIO.output -> string -> unit
 (**Print a string.
 
    Example: [String.print stdout "foo\n"]
@@ -1171,7 +1171,7 @@ end
 (* The following is for system use only. Do not call directly. *)
 
 external unsafe_get : string -> int -> char = "%string_unsafe_get"
-external unsafe_set : bytes -> int -> char -> unit = "%bytes_unsafe_set"
+external unsafe_set : bytes -> int -> char -> unit = "%string_unsafe_set"
 external unsafe_blit :
   string -> int -> bytes -> int -> int -> unit = "caml_blit_string" "noalloc"
 external unsafe_fill : bytes -> int -> int -> char -> unit = "caml_fill_string" "noalloc"
